@@ -60,6 +60,7 @@ It is useful to see only warning events, as we want to figure out what is the cu
   ```bash
   k get ev --field-selector type=Warning
   ```
+> Events are printed in chronological order. The most recent event is at the bottom.
 
 ## TODOs
 - [ ] Watch [Azure REST APIs with Postman](https://www.youtube.com/watch?v=6b1J03fDnOg&t=9s)
