@@ -2,7 +2,7 @@
 
 ## Understanding Pods
 
-Pod the basic computing unite in Kubernetes. A pod will have one or more containers. Containers in the same pod will run on the same worker node -- a single pod instance never spans multiple ndoes. 
+Pod is the smallest deployable unit in Kubernetes. A pod will have one or more containers. Containers in the same pod will run on the same worker node -- a single pod instance never spans multiple ndoes. 
 
 ![All containers of a pod run on the same node.](https://drek4537l1klr.cloudfront.net/luksa3/v-14/Figures/05image003.png)
 
@@ -15,6 +15,12 @@ Pod the basic computing unite in Kubernetes. A pod will have one or more contain
 
 - How a pod combines multiple containers?
   - We need something to group the related processes together, although they are running in multiple contianers.
-  - Inside a pod, containers share certain resources like network and file system (mounted to the pod). Details in Chapter 7.
+  - Inside a pod, containers share certain resources like network, UTS namespace, IPC namespace (yes, containers in the same pod can communicate using IPC), and file system (mounted to the pod). Details in Chapter 7.
 
 ![Containers in a pod share the same network interfaces](https://drek4537l1klr.cloudfront.net/luksa3/v-14/Figures/05image004.png)
+
+
+## ToDos
+- [ ] Deep dive into container runtime. Watch [Introduction and Deep Dive into containerd](https://www.youtube.com/watch?v=HFEZq2YddPU)
+- [ ] [Docker Deep Dive](https://app.pluralsight.com/library/courses/docker-deep-dive-update/table-of-contents)
+- [ ] What are pods and containers? Read [Pods](https://kubernetes.io/docs/concepts/workloads/pods/)
