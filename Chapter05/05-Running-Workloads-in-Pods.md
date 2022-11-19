@@ -89,6 +89,46 @@ Normally, we talk to the application in pod through the service in cluster. Howe
 
 
 ### Copying files to and from containers
+Normally, we don't want to change any file in a running container. However, this super useful in development. Kubectl provides the `cp` command to achieve this.
+
+Commands: 
+- Copy from pod to local: `k cp kiada:html/index.html ./index.html`
+- Copy from local to pod: `k cp ./index.html kiada:/html`
+
+### Executing commands in running containers
+We can use the `k exec` command to execute a lot of checking command. With the command, we no longer need to start a `curl` pod or log into a pod.
+
+Example: 
+- `k exec kiada -- ps aux`
+- `k exec kiada -- curl -s localhost:8080`
+
+**Run a shell in a container**
+- `k exec -it kiada -- bash`
+
+> Note: The double dash `--` here is to separate the Kubectl command and the command to be executed in the container.
+
+### Attaching to a running container
+Command `k attach` provides another way to interact with a running container. It is pretty similar to `k exec`. The interesting part is how this got achieved and how to attach terminal to a process.
+
+## Running multiple containers in a pod
+This section covers how to use sidecar containers. The example is to run Envoy proxy together with the kiada pod.
+
+### Display logs of pods with multiple containers 
+
+Using option `--container` or `-c` to check the log of a specific container.
+- Commands:
+  - `k logs kiada-ssl -c kiada`
+  - `k logs kiada-ssl -c envoy`
+  - `k logs kiada-ssl --all-containers`
+    - Not easy to read.
+
+### Running commands in contaners of multiple-container pods
+Example:
+- `k exec -it kiada-ssl -c envoy -- bash`
+
+## Running additional containers at pod startup
+In k8s, there is container dependency relationship. Instead, we use init containers to achieve this. In a pod, we can have multiple init containers for a main container.
+
 
 
 ## Questions
@@ -104,3 +144,9 @@ Normally, we talk to the application in pod through the service in cluster. Howe
 - [ ] Deep dive into container runtime. Watch [Introduction and Deep Dive into containerd](https://www.youtube.com/watch?v=HFEZq2YddPU)
 - [ ] [Docker Deep Dive](https://app.pluralsight.com/library/courses/docker-deep-dive-update/table-of-contents)
 - [ ] What are pods and containers? Read [Pods](https://kubernetes.io/docs/concepts/workloads/pods/)
+- [ ] How does `curl` command work?
+- [ ] How to attach a terminal to a process in Linux?
+- [ ] How Loopback works in Network?
+  - [ ] [Wiki of Loopback](https://en.wikipedia.org/wiki/Loopback)
+- [ ] How TLS termination works?
+  - [ ] Concrete example with Go, Java or C#.
