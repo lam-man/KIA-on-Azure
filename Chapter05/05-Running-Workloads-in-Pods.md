@@ -129,6 +129,44 @@ Example:
 ## Running additional containers at pod startup
 In k8s, there is container dependency relationship. Instead, we use init containers to achieve this. In a pod, we can have multiple init containers for a main container.
 
+**Unlike regular containers, init containers will start one after another, instead of starting in a parallel way.**
+![Time sequence showing how a pod's init and regular containers are started](https://drek4537l1klr.cloudfront.net/luksa3/v-14/Figures/05image012.png)
+
+- Init container usage: 
+  - Initialize files in the volumes used by main containers.Fetching certificates and private keys for main container. Creating config files, downloading data and so on. 
+  - Networking system initialization. All containers in a pod share the network system. Thus, initialization is for all containers.
+  - Postpone the start of main containers until some prerequisites satisfied. For example, a dependent service already started.
+  - Send notifications to other service that the pod is going to start.
+
+- Init container manifest sample
+```yaml
+spec:
+  initContainers:
+  - name: init-demo
+    image: luksa/init-demo:0.1
+  - name: network-check
+    image: luksa/network-connectivity-checker:0.1
+  containers:
+  - name: kiada
+    image: luksa/kiada:0.2
+    stdin: true
+    ports:
+    - name: http
+      containerPort: 8080
+  - name: envoy
+    image: luksa/kiada-ssl-proxy:0.1
+    ports:
+    - name: https
+      containerPort: 8443
+    - name: admin
+      containerPort: 9901
+```
+
+## Deleting pods and other objects
+- Delete all pods
+  - `k delete po --all`
+- Delete all objects
+  - `k delete all --all`
 
 
 ## Questions
