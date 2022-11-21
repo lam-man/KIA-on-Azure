@@ -70,3 +70,128 @@ containerStatuses:
     - `k describe po kiada`
     - `k get po kiada -o json | jq .status.containerStatuses`
     - `k get po kiada-init -o json | jq .status`
+
+## Keeping containers healthy
+Containers running in a pod could die easily. What we want to learn in this section is keep the containers healthy and running.
+
+### Understanding container auto-restart
+Auto healing is coming with k8s. As a pod is alive, kubelet will keep the container running. If the main process crashes, kubelet will restart the container.
+
+- How to kill a envoy proxy container? 
+  - Visit `http://localhost:9901` and click the `quitquitquit` button. 
+  - `curl -X POST http://localhost:9901/quitquitquit`
+
+- What happened when a container got killed?
+  K8s will not restart any container. Instead, it will kill the container and create a new one. With the killing, following are the effects. 
+  - We will lose the contianer's filesystem, which the main process writes to. (In next chapter, we will learn how to add a storage volume to a pod.)
+  - If init containers are defined in the pod and one of the pod's regular containers is restarted, the init containers are not executed again.
+
+- Configuring the pod's restart policy
+  `restartPolicy` is configurable in Kubernetes. Following are the restart policies in k8s. 
+  - **Always**: Container is restarted regardless of the exit code the process in the container terminates with. **This is the default restart policy.**
+  - **OnFailure**: The container is restarted only if the process terminates with a non-zero exit code, which by convention indicates failure.
+  - **Never**: The container is never restarted - not even when it fails.
+
+- **NOTE**: The restart policy is configured at the pod level and applies to all its containers. Configuration for each container separately is not possible.
+
+- Time delay before a container is restarted
+  | Restart Count | Deplay Time |
+  |---------------|-------------|
+  |1              |0 (immediately)|
+  |2              |10s          |
+  |3              |20s          |
+  |4              |40s          |
+  |5              |80s          |
+  |...            |5 mins       |
+
+- Command to get the container status
+  - `k get po kiada-ssl -o json | jq .status.containerStatuses`
+
+### Checking the container's health using liveness probes
+
+A process can stay in deadlock status without stopping. Thus, the container will not be restarted. In order to restart the unhealthy container forcely, we want to use liveness probes.
+
+> :exclamation: **Note:  Liveness probes can only be used in the pod's regular containers. They can't be defined in init containers.**
+
+- Types of liveness probes
+  - **HTTP GET**: Send http get request to container's IP address and expect success response in time. Otherwise, the container is considered unhealthy.
+  - **TCP Socket**: Establish a TCP connection to a specific port of the container successfully. Otherwise, mark container as unhealthy.
+  - **Exec**: Run a command inside the container.
+
+- Sample of liveness probe
+  ```yaml
+  livenessProbe:
+    httpGet:
+      path: /ready
+      port: admin
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 3
+  ```
+- Liveness probe fields explanation
+  ![The configuration and operation of a liveness probe](https://drek4537l1klr.cloudfront.net/luksa3/v-14/Figures/06image007.png)
+
+- Liveness probe verification through log
+  - Commands
+    - `k logs kiada-liveness -c kiada -f`
+    - `k exec kiada-liveness -c envoy -- tail -f /tmp/envoy.admin.log`
+
+- :exclamation: **Error exit code note**:
+  Exit code 128+n indicates that the process exited due to external signal n. Exit code 137 is `128+9`, where `9` represents the `KILL` signal. Exit code `143` is `128 + 15`, where `15` is the `TERM` signal, which indicates the container runs a shell that has terminated gracefully.
+
+### Using a startup probe when an application is slow to start 
+If an application lake minutes to start, then short time liveness probe could prevent the container from reaching expected status. Although we can achieve longer delay by configuring `initialDelaySeconds`, `periodSeconds` and `failureThreshold`. 
+
+- Start up probe sample
+  ```yaml
+  ...
+  containers:
+  - name: kiada
+    image: luksa/kiada:0.1
+    ports:
+    - name: http
+      containerPort: 8080
+    startupProbe:
+      httpGet:
+        path: /
+        port: http
+      periodSeconds: 10
+      failureThreshold:  12
+    livenessProbe:
+      httpGet:
+        path: /
+        port: http
+      periodSeconds: 5
+      failureThreshold: 2
+  ```
+
+- Failure is normal for a startup probe
+  A failure just means the application is ready yet.
+
+- Creating effective liveness probe handlers
+  - A liveness probe is needed, otherwise your application will remain in unhealthy status and need a manual restart.
+  - Expose a specific health-check endpoint and make sure no authentication is needed for the entpoint.
+  - A liveness probe should only check the status of the target application. No dependent applications should be checked.
+  - Keeping probes light. Use less CPU and memory.
+
+## Executing actions at container start-up and shutdown
+
+
+
+## :question: Questions
+- Can we configure `initialDelaySeconds` only for applications that are slow to start? 
+  - In this case, we will wait for enough time at the begining. The restart will not be affected as `periodSeconds` and `failureThreshold` will be small.
+  - **Answer**: I think we cannot do this. 
+    - We don't know how long exectly we need to start an application. Thus `initialDeplaySeconds` may not be able to cover the startup time precisely.
+    - During the application start interval, we want to periodically check whether the applicaton is ready. Then we need to set `periodSeconds` and `failureThreshold` to check with a long interval, which will affect the restart.
+
+
+
+
+
+
+## ToDos
+- [ ] How to define and find the restart policy of a pod? 
+  - [ ] Create concrete examples.
+- [ ] Create an application with liveness probe port configured.
