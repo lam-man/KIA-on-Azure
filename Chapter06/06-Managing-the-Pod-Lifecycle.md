@@ -177,6 +177,77 @@ If an application lake minutes to start, then short time liveness probe could pr
 
 ## Executing actions at container start-up and shutdown
 
+Besides init containers, we can use **lifecycle hooks** to fulfill some requirements. Most cases, lifecycle hooks are used to execute some commands. **Also possible to execute to some scripts.** You can see the details in the example below.
+- Post-start hooks: executed when the container starts
+- Pre-stop hooks: executed shortly before the containerstops
+
+`Init containers` are in pod level. However, lifecycle hooks are in container level. Following image show the details. 
+![How the post-start and pre-stop hook fit into the container's lifecycle](https://drek4537l1klr.cloudfront.net/luksa3/v-14/Figures/06image010.png)
+
+
+- Understand the command in post-start hook.
+  ```yaml
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: quote-poststart
+  spec:
+    containers:
+    - name: nginx
+      image: nginx:alpine
+      ports:
+      - name: http
+        containerPort: 80
+      lifecycle:
+        postStart:
+          exec:
+            command:
+            - sh
+            - -c
+            - |
+              apk add fortune && \
+              curl -O https://luksa.github.io/kiada/book-quotes.txt && \
+              curl -O https://luksa.github.io/kiada/book-quotes.txt.dat && \
+              fortune book-quotes.txt > /usr/share/nginx/html/quote
+  ```
+  `sh` calls the program `sh` as interpreter and the `-c` flag means execute the following command as interpreted by this program. [Reference](https://askubuntu.com/questions/831847/what-is-the-sh-c-command)
+
+
+- Understanding how a post-start hook affects the container
+  - **A container will stay in the `waiting` state due to `ContainerCreating` until the hook invocaton is completed.**
+  - A container will keep restart if the post-start hook keeps failing (hook can't be executed or returns a non-zero exit code).
+  >:exclamation:**Note: post-start hook acutally means postpone the start of the container.**
+
+- Using an HTTP GET post-start hook
+  - Example
+  ```yaml
+  lifecycle:
+      postStart:
+        httpGet:
+          host: myservice.example.com
+          port: 80
+          path: /container-started
+  ```
+
+### Using pre-stop hooks to run a process before the container terminates
+
+- Understanding how a pre-stop hook affects the container
+  - When k8s need to terminate a container, it will send a `TERM` signal to the main process in the container.
+  - If there is a pre-stop hook defined, then k8s will execute the hook **BEFORE** sending the `TERM` signal.
+
+- Using a pre-stop lifecycle hook to shut down a container gracefully
+  - Example
+  ```yaml
+  lifecycle:
+      preStop:
+        exec:
+          command:
+          - nginx
+          - -s
+          - quit
+  ```
+
+
 
 
 ## :question: Questions
@@ -185,10 +256,6 @@ If an application lake minutes to start, then short time liveness probe could pr
   - **Answer**: I think we cannot do this. 
     - We don't know how long exectly we need to start an application. Thus `initialDeplaySeconds` may not be able to cover the startup time precisely.
     - During the application start interval, we want to periodically check whether the applicaton is ready. Then we need to set `periodSeconds` and `failureThreshold` to check with a long interval, which will affect the restart.
-
-
-
-
 
 
 ## ToDos
