@@ -281,7 +281,39 @@ Init containers run one by one, **the order is specified in the `initContainers`
   **Init containers must be idempotent.** Normally, init containers will only be executed once. Even though the main container got terminated, the pod's init containers will not be re-executed. However, if the entire pod got restarted, then the init containers might be executed again.
 
 ### Understanding the run stage
+After all init containers started, k8s will create all the regular containers parallelly **in theory**. Ideally, containers' lifecycle should not be affected by each other. Following is the real situation: 
 
+> :warning: **A container's post-start hook could block the creation of the subsequent container**
+Kubelet creates and starts the containers synchronously according to the order defined in pod's `spec`. Exiting post-start hooks run asynchronously with corresponding main containers. However, the running post-start hook handler will block the start of the subsequent containers.
+
+- Introducing the termination grace period
+![A container's termination sequence](https://drek4537l1klr.cloudfront.net/luksa3/v-14/Figures/06image016.png)
+
+
+### Understanding the termination stage
+Containers will keep running until the deletion of the pod object.
+
+- Deletion grace period
+  The time interval is defined in `metadata.deletionGracePeriodSeconds` field. Default value is from `spec.terminationGracePeriodSeconds` field. **You can specify a different value in the `k delete` command. 
+  - `k delete pod kiada-ssl --grace-period 10`
+
+- How deletion grace period come in the picture
+  ![The termination sequence inside a pod](https://drek4537l1klr.cloudfront.net/luksa3/v-14/Figures/06image017.png)
+
+- Grace period sample
+  ```yaml
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: kiada-ssl-shortgraceperiod
+  spec:
+    terminationGracePeriodSeconds: 5
+    containers:
+    ...
+  ```
+
+- Shutdown behavior of an application
+  Sometimes, it takes a long time to shutdown an application. The cause could be that we didn't define a termination logic in the application. We need to make sure the process will listen to the `TERM` signal or process `SIGTERM`.
 
 
 ## :question: Questions
@@ -296,3 +328,4 @@ Init containers run one by one, **the order is specified in the `initContainers`
 - [ ] How to define and find the restart policy of a pod? 
   - [ ] Create concrete examples.
 - [ ] Create an application with liveness probe port configured.
+- [ ] Create an application that will process `SIGTERM`.
