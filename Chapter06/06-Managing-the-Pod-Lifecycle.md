@@ -247,6 +247,40 @@ Besides init containers, we can use **lifecycle hooks** to fulfill some requirem
           - quit
   ```
 
+## Understanding the pod lifecycle
+
+Pod lifecycle overview
+- Initialization stage: init containers run
+- Run stage: regular containers run
+- Termination stage: pod's containers are terminated 
+
+![The three stages of the pod's lifecycle](https://drek4537l1klr.cloudfront.net/luksa3/v-14/Figures/06image013.png)
+
+
+### Understanding the initialization stage
+Init containers run one by one, **the order is specified in the `initContainers` field in the pod's `spec` field.
+
+- Image pull policy
+  - Not Specified
+    - Default policy is `Always` with `:latest` tag in the mage. Otherwide, the default policy will be `IfNotPresent`.
+  - `Always`
+    - Pull the image whenever the container is (re)started. **However, if the local image matches the one in the registry, image will not be downloaded, but the registry still needs to be contacted.**
+  - `Never`
+    - Image must present on the worker node beforehand.
+  - `IfNotPresent`
+    - Image is pulled only when it is not available on the worker node. This means the image will only be pulled the first time it's required.
+
+> :warning: WARNING
+  If the imagePullPolicy is set to `Always` and the image registry is offline, the container will **NOT** run even if the same image is already stored locally. **A registry that is unavailable may therefore prevent your application from (re)starting.**
+
+
+- :exclamation: **Restarting failed init containers**
+  If an init container terminates with an error and the pod’s restart policy is set to `Always` or `OnFailure`, the failed init container is restarted. If the policy is set to `Never`, the subsequent init containers and the pod’s regular containers are never started. The pod’s status is displayed as `Init:Error` indefinitely. You must then delete and recreate the pod object to restart the application.
+
+- :exclamation: Re-executing the pod's init containers
+  **Init containers must be idempotent.** Normally, init containers will only be executed once. Even though the main container got terminated, the pod's init containers will not be re-executed. However, if the entire pod got restarted, then the init containers might be executed again.
+
+### Understanding the run stage
 
 
 
