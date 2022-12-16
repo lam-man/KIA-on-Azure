@@ -138,6 +138,7 @@ In this example, we are going to mount the same volume to multiple containers an
 - [X] If volumes share the pod lifecycle, will we lose the volumes when the pod restarted?
   - Section: 7.1.2: Understanding how volumes fit into pods
   - **Answer**: All volumes in a pod are created when the pod is set up - before any of its containers are started. They are torn down when the pod is shut down.
+- [ ] When we created an volumes, did we create on the node file system? Check and verify use the `kubectl node-shell` command.
 
 ## ToDos
-- [ ] 
+- [ ] Mount `azureFile` and `azureDisk` as a volume to a pod. Need concrete example.
