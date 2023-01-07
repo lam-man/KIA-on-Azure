@@ -38,7 +38,7 @@ Volumes are components within the pod and share the lifecycle with pod.
   - A pod can have multiple volumes.
   - A volume can be counted to multiple containers.
   - A container can mount zero or more volumes. 
-  - **Volumes mounted to a container cna be configured either as read/write or as read-only.**
+  - **Volumes mounted to a container can be configured either as read/write or as read-only.**
   - **In a pod with multiple containers, some volumes can be mounted exclusively to some containers.**
 
 - Sharing files between multiple containers
@@ -95,7 +95,7 @@ Volumes are components within the pod and share the lifecycle with pod.
   - `readOnly`: Whether to mount the volume as read-only. Defaults to `false`.
   - `mountPropagation`, `subPath` and `subPathExpr` are not so common.
 
-- Where to find the `emptyDir` volume
+- :exclamation: **Where to find the `emptyDir` volume**
   - The emptyDir is a normal file directory in the node's filesystem that's mounted into the container
     ![The emptyDir is a normal file directory in the node's filesystem that's mounted into the container](https://drek4537l1klr.cloudfront.net/luksa3/v-14/Figures/07image012.png)
 
@@ -133,12 +133,62 @@ In this example, we are going to mount the same volume to multiple containers an
   - Command
     - From container `quote-writer`: `k exec quote -c quote-writer -- cat /var/local/output/quote`
     - From container `nginx`: `k exec quote -c nginx -- cat /usr/share/nginx/html/quote`
+    - From node: 
+      - Get node name: `k get pod -o wide` --> You will see the node name. 
+      - Connect node with `node-shell`: `k node-shell <node-name>`
+
+## Using external storage in pods
+
+As `emptyDir` is a folder in local node. There are many reasons that the attached volume will be messed up. 
+- When the pod got deleted, the volume will be removed from node. 
+- K8s could reschedule a pod to another node at any time. Then the associated volume will not be able to visit. The pod will have another volume in the new node, but we lose the previous data.
+
+:exclamation: **With the above concerns, we need to have some sort of persisted volumes that will not affected by the lifecycle of pod and k8s reschedule.**
+
+### Attach `AzureDisk` as an external volume
+
+- :blue_book: [Create a static volume with Azure disks in AKS](https://learn.microsoft.com/en-us/azure/aks/azure-disk-volume)
+
+Foolwoing are the steps and commands to create an Azure Disk. Later, we will attach the Azure Disk to a pod.
+- Create Azure Disk in the nodepool resource group
+  - Get resource group name
+    `$nodeRG=az aks show --resource-group k8sInAction --name k8sLearn --query nodeResourceGroup -o tsv`
+  - Create Azure Disk
+    :exclamation: The result of the following command is the resource id of an Azure Disk. You will need it in the following steps.
+    ```shell
+    az disk create \
+    --resource-group $nodeRG \
+    --name myAKSDisk \
+    --size-gb 10 \
+    --query id --output tsv
+    ```
+  - Create `pv-azuredisk.yaml` and `pvc-azuredisk.yaml`
+    - [pv-azuredisk.yaml](deployment/azureDisk/pv-azuredisk.yaml)
+    - [pvc-azuredisk.yaml](deployment/azureDisk/pvc-azuredisk.yaml)
+  - Apply the above yaml files
+    - `k apply -f pv-azuredisk.yaml`
+    - `k apply -f pvc-azuredisk.yaml`
+
+> :warning: You need to be really careful on the size of nodes. Only certain type of nodes will support Azure Disk attach. `standard_d2a_v4 ` is not one of supported VMs.
+
+### Understanding how external volumes are mounted
+
+The problem here is quite obvious. You cannnot mount the persistent volume (Azure Disk in our case) to multiple hosts simultaneously in read/write mode. The only possible way is to set the Azure Disk into `read-only` mode.
+
+Command to find out the attached volumes of a node: 
+```
+k get node <node-name> -o json | jq .status.volumeAttached
+```
+
 
 ## Questions
 - [X] If volumes share the pod lifecycle, will we lose the volumes when the pod restarted?
   - Section: 7.1.2: Understanding how volumes fit into pods
   - **Answer**: All volumes in a pod are created when the pod is set up - before any of its containers are started. They are torn down when the pod is shut down.
-- [ ] When we created an volumes, did we create on the node file system? Check and verify use the `kubectl node-shell` command.
+  - **Update**: Restart are for containers instead of pod. When we say restart, we mean the containers in the pod will be restarted. The pod will not be deleted. Thus, the volumes associated with the pod will persis until the pod got deleted.
+- [X] When we created an volumes, did we create on the node file system? Check and verify use the `kubectl node-shell` command.
+  - **Yes.** `emptyDir` will create a directory on the same host node, which host the pod.
+- [ ] Why multiple pods in the same node can share the attached PV in read/write mode? When multiple pods write to the same file, will it cause consistency trouble? 
 
 ## ToDos
 - [ ] Mount `azureFile` and `azureDisk` as a volume to a pod. Need concrete example.
