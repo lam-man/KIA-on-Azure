@@ -118,6 +118,28 @@ command:
 
 ## Using a config map to decouple configuration from the pod
 
+With `command`, `args` and `env`, we can hardcode configuration into the pod manifest. It is not an ideal way, as we need to keep multiple version of pod manifest (for the same pod) for different environment like: staging, dev, and prod.
+
+### What is ConfigMaps
+
+**A ConfigMap is a Kubernetes API object that simply contains a list of key/value pairs.** Pods can reference one or more of these key/value entries in the config map. A pod can refer to multiple config maps, and multiple pods can use the same config map.
+
+- How ConfigMap object works with k8s? 
+  Typically, **applications will not read the ConfigMap objects via the k8s REST API.** ConfigMap have 2 ways to associate key/value pairs with k8s: 
+  - Key/Value pairs in the config map are passed to contianers as env variables.
+  - Mounted as files in the containers' filesystem via a `configMap` volume, as shown in the following picture.
+  ![Pods use config maps through environment variables and configMap volumes](https://drek4537l1klr.cloudfront.net/luksa3/v-14/Figures/09image004.png)
+
+- Benefits
+  - Without taking the way applications consuming `configMap`, a `configMap` object keep the application and configuration separated.
+  - Although we no longer need to maintain multiple pod manifests for the same pod, **we need to maintain several `configMap` yaml files.** 
+  ![Deploying the same pod manifest and different config map manifests in different environments](https://drek4537l1klr.cloudfront.net/luksa3/v-14/Figures/09image005.png)
+
+### Creating a ConfigMap object
+
+
+
+
 
 ## Questions
 
