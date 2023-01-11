@@ -125,3 +125,5 @@ command:
 - [ ] Figure out how Helm works with `configMap`. Concrete examples for the following task:
   - [ ] How to create a Helm chart for a service?
   - [ ] How to reference key values in a `configMap` from Helm chart?
+- [ ] What are the differences between `configMap` and `secrets`?
+  - [ ] Read [Kubernetes Secrets Are Not Really Secret!](https://auth0.com/blog/kubernetes-secrets-management/)
