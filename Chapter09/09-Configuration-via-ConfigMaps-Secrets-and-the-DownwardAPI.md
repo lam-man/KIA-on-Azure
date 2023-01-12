@@ -137,9 +137,91 @@ With `command`, `args` and `env`, we can hardcode configuration into the pod man
 
 ### Creating a ConfigMap object
 
+We have different ways to create a `configMap` object in k8s. Following are the common ways: 
+- `kubectl` command
+  ```bash
+  k create configmap kiada-config --from-literal status-message="This status message is set in the kiada-config config map"
+  ```
+- Create yaml file and use `k apply -f`
+  ```yaml
+  apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: kiada-config
+  data:
+    status-message: This status message is set in the kiada-config config map
+  ```
+- Command Command
+  - Get `configMap`
+    `k get cm` --> `cm` short for `configmap` or `configmaps`
+  - Display all the key value pairs in a config map
+    `k get cm <cm-name> -o json | jq .data`
+  - Display the value of a given key
+    `k get cm <cm-name> -o json | jq '.data["<key-name>"]'`
 
+### Injecting config map values as environment variables
 
+- Injecting a single config map entry using `valueFrom` in yaml
+  ```yaml
+  kind: Pod
+  ...
+  spec:
+    containers:
+    - name: kiada
+      env:
+      - name: INITIAL_STATUS_MESSAGE
+        valueFrom:
+          configMapKeyRef:
+            name: kiada-config
+            key: status-message
+            optional: true
+    volumeMounts:
+    ...
+  ```
+  - Check the env environment of a pod
+    `k exec kiada -- env`
+  
+- Marking a reference optional using `optional` in pod manifest
+  ```yaml
+  ...
+  - env:
+    - name: INITIAL_STATUS_MESSAGE
+      valueFrom:
+        configMapKeyRef:
+          key: status-message
+          name: kiada-config
+          optional: true
+  ```
+  > :exclamation: **NOTE:** With `optional` set to `true`, a pod will executed even if the config map or key is missing.
 
+- Injecting the entire config map using `envFrom`
+  Add entries one by one int `env` section is tedious. To avoid specifying each entry, we can use `envFrom` to load the entire config map.
+  ```yaml
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: kiada
+  spec:
+    containers:
+    - name: kiada
+      image: luksa/kiada:0.4
+      env:
+      - name: POD_NAME
+        value: kiada
+      envFrom:
+      - configMapRef:
+          name: kiada-config
+          optional: true
+      ports:
+      - name: http
+        containerPort: 8080
+  ```
+  - :exclamation: **Important Notes:** 
+    - The `optional: true` here is special, since the default is `false`. Defaultly, the pod will fail to start ifthe configmap doesn't exist.
+    - You can have **mutiple** configMap in `envFrom`
+    - You can `combine` the `env` and `envFrom` fields. Above pod manifest is an example.
+    - Prefixing keys
+      You can set an optional `prefix` for each config in the `envFrom` field. 
 
 ## Questions
 
@@ -147,5 +229,6 @@ With `command`, `args` and `env`, we can hardcode configuration into the pod man
 - [ ] Figure out how Helm works with `configMap`. Concrete examples for the following task:
   - [ ] How to create a Helm chart for a service?
   - [ ] How to reference key values in a `configMap` from Helm chart?
+- [ ] Concrete example on multiple `configMap` file and prefixing keys for each `configMap`.
 - [ ] What are the differences between `configMap` and `secrets`?
   - [ ] Read [Kubernetes Secrets Are Not Really Secret!](https://auth0.com/blog/kubernetes-secrets-management/)
