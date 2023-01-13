@@ -223,6 +223,43 @@ We have different ways to create a `configMap` object in k8s. Following are the 
     - Prefixing keys
       You can set an optional `prefix` for each config in the `envFrom` field. 
 
+### Injecting config map entries into containers as files
+
+Usually, we use environment variables to inject single-line values and multi-line values will be passed as files. For `configMap` that contains larger blocks of data, we mount the `configMap` as a volume.
+
+With `configMap` vlolume, we can the entries in it available as individual files. Then the process running in the container gets the entry's value by reading the contents of the file. **This is the popular way to pass large config file to a container.** Absolutely, we can combine it with `env` or `envFrom`.
+
+> :exclamation: **NOTE on ConfigMap Size:** etcd (underlying data store for k8s api objects) decided the amount of information that can fit in a `configMap`. For now, the max size is 1 MB
+
+- Create a `configMap` with file as value using command line
+  ```bash
+  k create configmap kiada-envoy-config \
+    --from-file=envoy.yaml \
+    --from-file=dummy.bin \
+    --dry-run=client -o yaml > cm.kiada-envoy-config.yaml
+  ```
+
+  - `--dry-run`: tell the command do not create the object in k8s API server, but only generates the object definition. 
+    - More on `--dry-run`: 
+      > Value after `=` Must be "none", "server", or "client". If client strategy, only print the object that would be sent, without sending it. If server strategy, submit server-side request without persisting the resource.
+  
+  - A sample result of the above command line can be found at
+    - [cm.kiada-envoy-config.yaml](./deployment/cm.kiada-envoy-config.yaml)
+    - Explanation: 
+      - binary file will be in `binaryData` filed and will be encoded in Base64 format. 
+      - yaml file will be in `data` field.
+
+  - :warning: NO TRAILING WHITESPACE IN THE VALUE YAML FILE
+    If you have trailing whitespace (whitespace at line end) in the yaml file you want to put as an entry in a configMap, the format of the configMap will be messed up.
+
+  
+
+
+## Reference Reading
+- [kubectl-commands](https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands)
+- 
+
+
 ## Questions
 
 ## ToDos
