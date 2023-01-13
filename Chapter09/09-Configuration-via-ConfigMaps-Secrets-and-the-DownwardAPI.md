@@ -252,7 +252,62 @@ With `configMap` vlolume, we can the entries in it available as individual files
   - :warning: NO TRAILING WHITESPACE IN THE VALUE YAML FILE
     If you have trailing whitespace (whitespace at line end) in the yaml file you want to put as an entry in a configMap, the format of the configMap will be messed up.
 
+- Using a configMap volume in a pod
+  - Sample pod manifest
+    ```yaml
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: kiada-ssl
+    spec:
+      volumes:
+      - name: envoy-config
+        configMap:
+          name: kiada-envoy-config
+      ...
+      containers:
+      ...
+      - name: envoy
+        image: luksa/kiada-ssl-proxy:0.1
+        volumeMounts:
+        - name: envoy-config
+          mountPath: /etc/envoy
+      ...
+    ```
+
+  - Marking a configMap volume as optional
+    When a container contains an environment varialbe that references an not-existed config map, **the container will be prevented from starting (if the env var is not optional). However, other containers will NOT be affected.** 
+
+    :exclamation: **This is not the case for config map as a volume.** A container with missing configMap (as a volume) will prevent all the containers from stating until the configMap got created. This is becuase all the pod's volumes must be set up before the pod's container can be started.
+
+    - > **NOTE on setting configMap volume as optional:** Config Map volume can be set as optional. With `optional: true`, the missing configMap volume will not affect the start of containers. (With optional, the configMap volume will not be created.)
+
+  - Projecting only specific config map entries
+    There are cases we want to associate certain files in a configMap. This can be achieved by using `items` in a configMap volume. Only entries in the `items` list will be included in the volume. 
+    ```yaml
+    volumes:
+      - name: envoy-config
+        configMap:
+          name: kiada-envoy-config
+          items:
+          - key: envoy.yaml
+            path: envoy.yaml
+     ```
+
+  - Setting file permissions in a configMap volume
+    - Default permission: 
+      - Regular: `rw-r--r--`
+      - Octal: `0644`
+    - Notes
+      - Set the `mode` field next to the item's `key` and `path`
+      - :warning:You need to use the octal number to indicate the permissions. **DONOT forget the leading 0.**
+        - Example: `defaultMode: 0740`
+      
+
+### Updating and deleting config maps
+      
   
+
 
 
 ## Reference Reading
