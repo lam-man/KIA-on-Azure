@@ -305,10 +305,38 @@ With `configMap` vlolume, we can the entries in it available as individual files
       
 
 ### Updating and deleting config maps
-      
+
+- In-place editing of API objects using `kubectl edit`
+  - Example: 
+    `k edit configmap kiada-envoy-config`
+- What happens when you modify a config map 
+  - `configMap` volume
+    The `configMap` volume will be automatically updated when a config map got updated. **However, there will be a minute delay for the `configMap` volume to be udpated.**
+  - Environment variables 
+    The env variables that reference the config map will not be updated until the containers restarted automatically or manually.
+- Understanding the consequences of updating a config map
+  As we all know, containers are immutable in k8s. Naturally, we would ask that should we make their configration immutable?
+  When we update the `configMap`, containers in the cluster will not be updated at the same time. Especially, k8s created to maintain the high availability of services. This means at some point, some pods in the cluster will be different with the rest of the cluster.
+- Preventing a config map from being updated
+  - Example
+    ```yaml
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: my-immutable-configmap
+    data:
+      mykey: myvalue
+      another-key: another-value
+    immutable: true
+    ```
+  - Benefit
+    Immutable config maps will help improve the performance of a k8s cluster, as users are not allowed to update config maps and `kubelets` don't have to be notified of changes to the ConfigMap object.
+- Deleting a config map
+  - Command
+    `k delete`
+
+### Understanding how configMap volumes work
   
-
-
 
 ## Reference Reading
 - [kubectl-commands](https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands)
