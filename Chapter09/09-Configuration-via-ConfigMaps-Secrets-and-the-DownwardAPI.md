@@ -336,7 +336,10 @@ With `configMap` vlolume, we can the entries in it available as individual files
     `k delete`
 
 ### Understanding how configMap volumes work
-  
+
+
+## Using Secrets to pass sensitive data to containers
+
 
 ## Reference Reading
 - [kubectl-commands](https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands)
