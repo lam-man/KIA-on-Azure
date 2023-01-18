@@ -18,5 +18,6 @@
 ## Questions
 - For the three components of ingress function, is the L7 load balancer in k8s cluster?
 - Does ingress controller have load balancer?
+- What are the differences between L4 and L7 load balancers?
 
 ## ToDos
