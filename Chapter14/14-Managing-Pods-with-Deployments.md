@@ -152,6 +152,8 @@ With deployment, we can rollback to a previous version easily with the following
 - `k applyf -f deploy.kiada.0.7.rollingUpdate.yaml` # Update the image to 0.7
 - Display rollout history for a deployment
   `k rollout history deploy kiada`
+- Rollback to a specific version
+  `k rollout undo deploy kiada --to-revision=1` 
 
 
 
